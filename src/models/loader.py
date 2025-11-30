@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import logging
 from pathlib import Path
 from typing import Optional
@@ -33,16 +34,24 @@ class MovenetModel:
 
 def load_movenet(model_path: Path) -> Optional[MovenetModel]:
     """Load a MoveNet TFLite model if available."""
+    if os.getenv("DISABLE_MOVENET", "").lower() in {"1", "true", "yes"}:
+        logger.info("MoveNet loading disabled via DISABLE_MOVENET; using fallback scorer.")
+        return None
+
     interpreter = None
+    interpreter_source = "unknown"
 
     # Prefer tflite_runtime, fall back to TensorFlow Lite
     try:
         from tflite_runtime.interpreter import Interpreter  # type: ignore
-    except Exception:  # pragma: no cover - dependency may be missing
+        interpreter_source = "tflite-runtime"
+    except Exception as exc:  # pragma: no cover - dependency may be missing
+        logger.debug("tflite-runtime not available: %s", exc)
         try:
             from tensorflow.lite import Interpreter  # type: ignore
-        except Exception:
-            logger.warning("Neither tflite-runtime nor TensorFlow Lite is available.")
+            interpreter_source = "tensorflow.lite"
+        except Exception as tf_exc:
+            logger.warning("Neither tflite-runtime nor TensorFlow Lite is available: %s", tf_exc)
             return None
 
     if not model_path.exists():
@@ -52,9 +61,15 @@ def load_movenet(model_path: Path) -> Optional[MovenetModel]:
     try:
         interpreter = Interpreter(model_path=str(model_path))
         interpreter.allocate_tensors()
-        logger.info("Loaded MoveNet model from %s", model_path)
+        logger.info("Loaded MoveNet model from %s via %s", model_path, interpreter_source)
     except Exception as exc:  # pragma: no cover - depends on runtime availability
-        logger.error("Failed to load MoveNet model: %s", exc)
+        logger.error(
+            "Failed to load MoveNet model from %s using %s: %s. "
+            "Set DISABLE_MOVENET=1 to skip model loading in constrained environments.",
+            model_path,
+            interpreter_source,
+            exc,
+        )
         return None
 
     return MovenetModel(interpreter)
