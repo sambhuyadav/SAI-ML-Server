@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import logging
 import tempfile
 from pathlib import Path
@@ -67,3 +68,16 @@ async def rate_video(
     rating = video_rater.rate(temp_path, quality=quality)
     temp_path.unlink(missing_ok=True)
     return rating
+
+
+if __name__ == "__main__":
+    port_value = os.getenv("PORT", "8000")
+    try:
+        port = int(port_value)
+    except ValueError:
+        logger.warning("Invalid PORT value %s; falling back to 8000", port_value)
+        port = 8000
+
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
