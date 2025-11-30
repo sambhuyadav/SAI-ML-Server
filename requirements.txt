@@ -5,7 +5,7 @@ python-multipart>=0.0.6
 numpy>=1.26.0
 opencv-python-headless>=4.9.0.80
 # Optional: choose one of these for MoveNet support (prefer tflite-runtime for size)
-tflite-runtime>=2.14.0; platform_machine=="x86_64"
+tflite-runtime>=2.14.0; platform_machine=="x86_64" and python_version < "3.11"
 tensorflow>=2.14.0; platform_machine!="x86_64"
 # Dev/test
 pytest>=8.2.0
